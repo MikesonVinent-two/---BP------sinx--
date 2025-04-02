@@ -6,10 +6,11 @@ from tqdm import tqdm
 import pickle
 import os
 from datetime import datetime
+from config import TRAINING_CONFIG, DATA_CONFIG, PATH_CONFIG, PLOT_CONFIG
 
 # 生成训练数据
 def generate_data(n_samples):
-    x = np.random.uniform(-np.pi, np.pi, n_samples)
+    x = np.random.uniform(DATA_CONFIG['x_range'][0], DATA_CONFIG['x_range'][1], n_samples)
     y = np.sin(x)
     return x, y
 
@@ -59,36 +60,30 @@ class NeuralNetwork:
 
 # 训练函数
 def train_network():
-    # 设置超参数
-    n_samples = 1000
-    hidden_size = 512
-    epochs = 10000
-    learning_rate = 0.1
-    
     # 创建保存文件的目录
-    if not os.path.exists('models'):
-        os.makedirs('models')
-    if not os.path.exists('plots'):
-        os.makedirs('plots')
+    if not os.path.exists(PATH_CONFIG['model_dir']):
+        os.makedirs(PATH_CONFIG['model_dir'])
+    if not os.path.exists(PATH_CONFIG['plot_dir']):
+        os.makedirs(PATH_CONFIG['plot_dir'])
     
     # 生成文件名的参数字符串
-    params_str = f"samples{n_samples}_hidden{hidden_size}_lr{learning_rate}_epochs{epochs}"
+    params_str = f"samples{TRAINING_CONFIG['n_samples']}_hidden{TRAINING_CONFIG['hidden_size']}_lr{TRAINING_CONFIG['learning_rate']}_epochs{TRAINING_CONFIG['epochs']}"
     
     # 生成训练数据
-    X_train, y_train = generate_data(n_samples)
+    X_train, y_train = generate_data(TRAINING_CONFIG['n_samples'])
     X_train = X_train.reshape(-1, 1)
     y_train = y_train.reshape(-1, 1)
 
     # 初始化神经网络
-    nn = NeuralNetwork(1, hidden_size)
+    nn = NeuralNetwork(1, TRAINING_CONFIG['hidden_size'])
 
     # 训练循环
-    for epoch in tqdm(range(epochs)):
+    for epoch in tqdm(range(TRAINING_CONFIG['epochs'])):
         # 前向传播
         output = nn.forward(X_train)
         
         # 反向传播
-        nn.backward(X_train, y_train, output, learning_rate)
+        nn.backward(X_train, y_train, output, TRAINING_CONFIG['learning_rate'])
         
         # 计算误差
         if epoch % 100 == 0:
@@ -98,7 +93,7 @@ def train_network():
                 break
 
     # 保存模型
-    model_filename = f"models/sin_model_{params_str}.pkl"
+    model_filename = f"{PATH_CONFIG['model_dir']}/{PATH_CONFIG['model_prefix']}_{params_str}.pkl"
     nn.save_model(model_filename)
     print(f"模型已保存至: {model_filename}")
     
@@ -107,13 +102,13 @@ def train_network():
 # 可视化结果
 def plot_results(nn, params_str):
     # 生成测试数据
-    X_test = np.linspace(-np.pi, np.pi, 200).reshape(-1, 1)
+    X_test = np.linspace(DATA_CONFIG['test_range'][0], DATA_CONFIG['test_range'][1], DATA_CONFIG['test_points']).reshape(-1, 1)
     y_pred = nn.forward(X_test)
     y_true = np.sin(X_test)
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(X_test, y_true, label='True sin(x)', color='blue')
-    plt.plot(X_test, y_pred, label='Neural Network', color='red', linestyle='--')
+    plt.figure(figsize=PLOT_CONFIG['figsize'])
+    plt.plot(X_test, y_true, label='True sin(x)', color=PLOT_CONFIG['true_color'])
+    plt.plot(X_test, y_pred, label='Neural Network', color=PLOT_CONFIG['pred_color'], linestyle=PLOT_CONFIG['pred_style'])
     plt.legend()
     plt.grid(True)
     plt.title('神经网络拟合正弦函数')
@@ -121,7 +116,7 @@ def plot_results(nn, params_str):
     plt.ylabel('y')
     
     # 保存图像
-    plt.savefig(f"plots/sin_plot_{params_str}.png", dpi=300, bbox_inches='tight')
+    plt.savefig(f"{PATH_CONFIG['plot_dir']}/sin_plot_{params_str}.png", dpi=PLOT_CONFIG['dpi'], bbox_inches='tight')
     plt.show()
     
     # 计算误差
@@ -135,7 +130,7 @@ def plot_results(nn, params_str):
         'parameters': params_str
     }
     
-    with open(f"models/training_results_{params_str}.txt", 'w') as f:
+    with open(f"{PATH_CONFIG['model_dir']}/training_results_{params_str}.txt", 'w') as f:
         for key, value in results.items():
             f.write(f"{key}: {value}\n")
 
